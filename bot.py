@@ -4,8 +4,10 @@ from flask import Flask, request
 app = Flask(__name__)
 app.json.ensure_ascii = False
 
-TELEGRAM_TOKEN = "8988065911:AAHE-Y1YMhFjW-YcuEqZjn5p00JejHCPLbg"
-GROQ_KEY = "gsk_حط_المفتاح_بتاعك_هنا" # الصق مفتاح Groq بتاعك هنا
+import os
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+GROQ_KEY = os.environ.get("GROQ_KEY")
+
 
 def send_message(chat_id, text):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
