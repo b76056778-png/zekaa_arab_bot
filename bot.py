@@ -1,31 +1,27 @@
-import requests
-from flask import Flask, request
-
-app = Flask(__name__)
-app.json.ensure_ascii = False
-
 import os
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-GROQ_KEY = os.environ.get("GROQ_KEY")
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from groq import Groq
 
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+GROQ_KEY = os.getenv("GROQ_KEY")
 
-def send_message(chat_id, text):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    requests.post(url, json={"chat_id": chat_id, "text": text})
+client = Groq(api_key=GROQ_KEY)
 
-@app.route('/', methods=['POST'])
-def webhook():
-    data = request.get_json()
-    if 'message' in data:
-        chat_id = data['message']['chat']['id']
-        user_message = data['message']['text']
-        send_message(chat_id, "ثواني بفكر... 🤔")
-        headers = {"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"}
-        payload = {"model": "llama-3.1-8b-instant", "messages": [{"role": "user", "content": user_message}]}
-        response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
-        reply = response.json()['choices'][0]['message']['content']
-        send_message(chat_id, reply)
-    return "ok"
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("اهلا! انا البوت بتاعك 🤖 ابعتلي اي سؤال")
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_message = update.message.text
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": user_message}]
+    )
+    await update.message.reply_text(response.choices[0].message.content)
+
+app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+
+print("البوت شغال...")
+app.run_polling()
